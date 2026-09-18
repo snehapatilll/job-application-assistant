@@ -3,11 +3,24 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 /**
+ * Read a required environment variable, throwing a clear error if it is
+ * missing. Use this for values that must exist before a feature can run
+ * (DB connection string, JWT secret, LLM key) so failures are explicit.
+ */
+export function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (value === undefined || value.trim() === '') {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+/**
  * Centralized, typed access to environment configuration.
  *
- * Only a subset is required in Phase 1 (the server runs without a DB or LLM
- * key). Values needed by later phases are read lazily where they are used, so
- * the hello-world server still boots with a minimal `.env`.
+ * Non-critical values are read eagerly with defaults. Secrets (DATABASE_URL,
+ * JWT_SECRET, GEMINI_API_KEY) are read lazily via `requireEnv` where they are
+ * used, so the server still boots for endpoints that do not need them.
  */
 export const config = {
   port: Number(process.env.PORT ?? 3001),
