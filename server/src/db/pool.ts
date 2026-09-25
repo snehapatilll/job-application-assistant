@@ -4,16 +4,29 @@ import { requireEnv } from '../config.js';
 const { Pool } = pg;
 
 /**
+ * Neon connection strings ship with `sslmode`/`channel_binding` query params.
+ * `pg` currently treats `sslmode=require` as an alias for `verify-full` but
+ * warns that this will change to weaker libpq semantics in a future major.
+ * We strip those params and configure TLS explicitly instead, so the security
+ * level is deterministic and does not silently weaken on upgrade.
+ */
+function buildConnectionString(raw: string): string {
+  const url = new URL(raw);
+  url.searchParams.delete('sslmode');
+  url.searchParams.delete('channel_binding');
+  return url.toString();
+}
+
+/**
  * A single connection Pool created once and reused across the whole app.
  *
  * Import `pool` anywhere that needs the database; do NOT create additional
- * pools. Neon requires TLS, so SSL is enabled. `rejectUnauthorized: false`
- * is the standard setting for Neon's pooled endpoint (its cert chain is not
- * in Node's default trust store) — the connection is still encrypted.
+ * pools. Neon requires TLS and presents a publicly trusted certificate, so we
+ * verify it properly rather than disabling verification.
  */
 export const pool = new Pool({
-  connectionString: requireEnv('DATABASE_URL'),
-  ssl: { rejectUnauthorized: false },
+  connectionString: buildConnectionString(requireEnv('DATABASE_URL')),
+  ssl: { rejectUnauthorized: true },
 });
 
 pool.on('error', (err) => {
