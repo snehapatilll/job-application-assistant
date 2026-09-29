@@ -66,9 +66,26 @@ npm install
 npm run dev            # starts on http://localhost:5173
 ```
 
-Open <http://localhost:5173>. The page calls the backend's `/api/health`
-endpoint (proxied through Vite) and displays the response, confirming the two
-apps are wired together.
+Open <http://localhost:5173>. Create an account, upload a resume, paste a job
+description, and the analysis appears on its own page.
+
+### Frontend notes
+
+The session cookie is httpOnly, so the page cannot read it to find out whether
+it is signed in — it asks the server instead, via `/api/auth/me` on load. That
+answer is the app's single source of truth for auth state.
+
+Two consequences worth knowing:
+
+- Every request goes through `src/lib/api.ts`, which sets
+  `credentials: 'include'`. A component calling `fetch` directly would be
+  silently unauthenticated, so nothing else is allowed to.
+- `ProtectedRoute` renders a placeholder while that first check is in flight
+  rather than redirecting, otherwise a signed-in user reloading the page would
+  be bounced to `/login` for a moment before the answer arrived.
+
+Signing out clears the React Query cache as well as the cookie, so the next
+person to use the browser never sees the previous user's resumes.
 
 ## Tests
 
@@ -188,10 +205,10 @@ Other decisions worth knowing:
 
 1. ✅ **Scaffold monorepo** — both apps run, frontend hits a backend hello-world.
 2. ✅ **Schema + `pg` Pool + `db:setup`** — Neon connection verified.
-3. 🚧 User repository + auth (register/login/JWT) — backend done, client UI pending.
-4. 🚧 File upload + text extraction — backend done, client UI pending.
+3. ✅ User repository + auth (register/login/JWT).
+4. ✅ File upload + text extraction.
 5. 🚧 LLM service (structured output) + fit-score logic — built; the live Gemini
    round-trip is still unverified (free-tier quota).
-6. ⬜ Frontend New Analysis flow + Result view.
+6. ✅ Frontend New Analysis flow + Result view.
 7. ⬜ History (save + list + reopen).
 8. ⬜ Polish: error states, README, styling.
