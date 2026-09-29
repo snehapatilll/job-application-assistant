@@ -42,6 +42,8 @@ export function NewAnalysisPage() {
     onSuccess: ({ analysis }) => {
       // Seed the cache so the result page renders without a second request.
       queryClient.setQueryData(['analysis', analysis.id], analysis);
+      // The history list is now a page behind.
+      void queryClient.invalidateQueries({ queryKey: ['analyses', 'history'] });
       void navigate(`/analyses/${String(analysis.id)}`);
     },
   });

@@ -123,6 +123,7 @@ afterwards, so concurrent test files never clean up each other's rows.
 | GET    | `/api/resumes`       | ✅   | The user's resumes, newest first             |
 | GET    | `/api/resumes/:id`   | ✅   | One resume, including the extracted text     |
 | POST   | `/api/analyses`      | ✅   | Analyse a resume against a job description   |
+| GET    | `/api/analyses`      | ✅   | History, newest first (`limit`, `offset`)    |
 | GET    | `/api/analyses/:id`  | ✅   | Reopen a stored analysis                     |
 
 ### Auth design notes
@@ -191,6 +192,18 @@ Other decisions:
 - The job description and the analysis are inserted in one transaction, so a
   failure cannot leave an orphaned `job_descriptions` row.
 
+### History notes
+
+The list query deliberately does **not** select the `result` JSONB — a history
+page needs a score and a label, not several kilobytes of cover letter per row.
+It takes only the first 300 characters of each job description and derives the
+row's title from the first non-empty line, which is almost always the posting's
+title.
+
+Paging fetches one row beyond `limit` to answer "is there more?", rather than
+running a second `COUNT` over the same index. It is served by the
+`(user_id, created_at DESC)` index added back in Phase 2.
+
 Other decisions worth knowing:
 
 - Passwords are bcrypt-hashed at cost 12, and capped at 72 **bytes** because
@@ -210,5 +223,5 @@ Other decisions worth knowing:
 5. 🚧 LLM service (structured output) + fit-score logic — built; the live Gemini
    round-trip is still unverified (free-tier quota).
 6. ✅ Frontend New Analysis flow + Result view.
-7. ⬜ History (save + list + reopen).
+7. ✅ History (save + list + reopen).
 8. ⬜ Polish: error states, README, styling.

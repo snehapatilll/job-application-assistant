@@ -1,4 +1,5 @@
 import type { AnalysisResult } from '../lib/types';
+import { scoreBand } from '../lib/scoreBand';
 
 /**
  * The fit score is a single ratio against a limit, so it is drawn as a meter
@@ -10,44 +11,8 @@ import type { AnalysisResult } from '../lib/types';
  * meaning alone: the band is always spelled out in words beside it.
  */
 
-interface Band {
-  label: string;
-  description: string;
-  fill: string;
-  track: string;
-  text: string;
-}
-
-function bandFor(score: number): Band {
-  if (score >= 75) {
-    return {
-      label: 'Strong match',
-      description: 'You cover most of what this posting asks for.',
-      fill: 'bg-emerald-600',
-      track: 'bg-emerald-100',
-      text: 'text-emerald-700',
-    };
-  }
-  if (score >= 45) {
-    return {
-      label: 'Partial match',
-      description: 'Worth applying, but address the gaps below first.',
-      fill: 'bg-amber-500',
-      track: 'bg-amber-100',
-      text: 'text-amber-700',
-    };
-  }
-  return {
-    label: 'Weak match',
-    description: 'This posting asks for a lot you have not evidenced.',
-    fill: 'bg-red-600',
-    track: 'bg-red-100',
-    text: 'text-red-700',
-  };
-}
-
 export function FitScore({ result }: { result: AnalysisResult }) {
-  const band = bandFor(result.fitScore);
+  const band = scoreBand(result.fitScore);
   const { earnedWeight, totalWeight } = result.scoreBreakdown;
 
   return (

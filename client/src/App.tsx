@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { NewAnalysisPage } from './pages/NewAnalysisPage';
 import { AnalysisPage } from './pages/AnalysisPage';
+import { HistoryPage } from './pages/HistoryPage';
 
 function NotFoundPage() {
   return (
@@ -30,6 +31,7 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<NewAnalysisPage />} />
+          <Route path="/history" element={<HistoryPage />} />
           <Route path="/analyses/:id" element={<AnalysisPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

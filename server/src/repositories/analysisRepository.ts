@@ -20,6 +20,38 @@ interface AnalysisRow {
   created_at: Date;
 }
 
+/** A history row — enough to identify an analysis without its full result. */
+export interface AnalysisSummary {
+  id: number;
+  fitScore: number;
+  createdAt: string;
+  resumeFilename: string;
+  /** First line of the job description, used as the row's title. */
+  jobTitle: string;
+}
+
+interface AnalysisSummaryRow {
+  id: number;
+  fit_score: number;
+  created_at: Date;
+  original_filename: string;
+  job_excerpt: string;
+}
+
+/**
+ * The first non-empty line of a pasted posting, which is almost always its
+ * title. Falls back to the leading text when the posting has no line breaks.
+ */
+function deriveJobTitle(excerpt: string): string {
+  const firstLine = excerpt
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line !== '');
+
+  const title = firstLine ?? excerpt.trim();
+  return title === '' ? 'Untitled posting' : title.slice(0, 120);
+}
+
 function toAnalysis(row: AnalysisRow): Analysis {
   return {
     id: row.id,
@@ -79,6 +111,50 @@ export async function insertAnalysis(params: {
     // Always return the client to the pool, or the pool leaks connections.
     client.release();
   }
+}
+
+/**
+ * List a user's analyses, newest first.
+ *
+ * The `result` JSONB is deliberately not selected — a history page needs a
+ * score and a label, not several kilobytes of cover letter per row. Only the
+ * first 300 characters of each job description come back, enough to derive a
+ * title from.
+ *
+ * One extra row beyond `limit` is fetched to answer "is there more?" without
+ * a second COUNT query over the same index.
+ */
+export async function listAnalyses(
+  userId: number,
+  { limit, offset }: { limit: number; offset: number },
+): Promise<{ analyses: AnalysisSummary[]; hasMore: boolean }> {
+  const result = await query<AnalysisSummaryRow>(
+    `SELECT a.id,
+            a.fit_score,
+            a.created_at,
+            r.original_filename,
+            left(j.text, 300) AS job_excerpt
+       FROM analyses a
+       JOIN resumes r          ON r.id = a.resume_id
+       JOIN job_descriptions j ON j.id = a.job_description_id
+      WHERE a.user_id = $1
+      ORDER BY a.created_at DESC, a.id DESC
+      LIMIT $2 OFFSET $3`,
+    [userId, limit + 1, offset],
+  );
+
+  const hasMore = result.rows.length > limit;
+
+  return {
+    hasMore,
+    analyses: result.rows.slice(0, limit).map((row) => ({
+      id: row.id,
+      fitScore: row.fit_score,
+      createdAt: row.created_at.toISOString(),
+      resumeFilename: row.original_filename,
+      jobTitle: deriveJobTitle(row.job_excerpt),
+    })),
+  };
 }
 
 /**

@@ -29,6 +29,9 @@ export function Layout() {
             <NavLink to="/" end className={navLinkClass}>
               New analysis
             </NavLink>
+            <NavLink to="/history" className={navLinkClass}>
+              History
+            </NavLink>
           </nav>
 
           <div className="ml-auto flex items-center gap-3">

@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { buildAnalysis } from '../services/analysisService.js';
-import { findAnalysisById, insertAnalysis } from '../repositories/analysisRepository.js';
+import {
+  findAnalysisById,
+  insertAnalysis,
+  listAnalyses,
+} from '../repositories/analysisRepository.js';
 import { findResumeById } from '../repositories/resumeRepository.js';
 import { badRequest, HttpError } from '../utils/httpError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -70,6 +74,25 @@ analysesRouter.post(
     });
 
     res.status(201).json({ analysis });
+  }),
+);
+
+const listQuerySchema = z.object({
+  // Capped so a hand-written query string cannot ask for the whole table.
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+/** GET /api/analyses — the user's history, newest first. */
+analysesRouter.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const parsed = listQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      throw badRequest('Invalid pagination parameters', fieldErrors(parsed.error));
+    }
+
+    res.json(await listAnalyses(getUserId(req), parsed.data));
   }),
 );
 

@@ -54,6 +54,20 @@ export interface Analysis {
   createdAt: string;
 }
 
+/** A history row — no `result`, which a list does not need. */
+export interface AnalysisSummary {
+  id: number;
+  fitScore: number;
+  createdAt: string;
+  resumeFilename: string;
+  jobTitle: string;
+}
+
+export interface AnalysisPage {
+  analyses: AnalysisSummary[];
+  hasMore: boolean;
+}
+
 /** How each importance level is labelled in the UI. */
 export const IMPORTANCE_LABEL: Record<Importance, string> = {
   critical: 'Critical',
