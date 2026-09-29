@@ -15,6 +15,9 @@ export function requireEnv(name: string): string {
   return value;
 }
 
+/** How long an auth session lasts, in milliseconds (7 days). */
+export const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+
 /**
  * Centralized, typed access to environment configuration.
  *
@@ -26,4 +29,8 @@ export const config = {
   port: Number(process.env.PORT ?? 3001),
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
   nodeEnv: process.env.NODE_ENV ?? 'development',
+  isProduction: process.env.NODE_ENV === 'production',
+
+  /** Name of the httpOnly cookie carrying the session JWT. */
+  authCookieName: 'jaa_session',
 } as const;

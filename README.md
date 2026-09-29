@@ -29,7 +29,7 @@ Each app is independently runnable and has its own `package.json` and
 | Backend  | Node.js + Express + TypeScript (strict)                           |
 | Database | PostgreSQL (Neon) via the `pg` driver with hand-written SQL       |
 | LLM      | Google Gemini (Flash) via `@google/genai`                         |
-| Auth     | JWT (email + password, bcrypt-hashed)                             |
+| Auth     | JWT in an httpOnly cookie (email + password, bcrypt-hashed)       |
 
 ## Architecture (high level)
 
@@ -70,11 +70,43 @@ Open <http://localhost:5173>. The page calls the backend's `/api/health`
 endpoint (proxied through Vite) and displays the response, confirming the two
 apps are wired together.
 
+## API
+
+| Method | Route                | Auth | Purpose                                     |
+| ------ | -------------------- | ---- | ------------------------------------------- |
+| GET    | `/api/health`        | —    | Liveness check                              |
+| POST   | `/api/auth/register` | —    | Create an account, start a session          |
+| POST   | `/api/auth/login`    | —    | Exchange credentials for a session          |
+| POST   | `/api/auth/logout`   | —    | Clear the session cookie                    |
+| GET    | `/api/auth/me`       | ✅   | Current user — used to restore session state |
+
+### Auth design notes
+
+The session JWT travels in an **httpOnly, SameSite=Lax cookie**, not in
+`localStorage`. The tradeoff:
+
+- **httpOnly** means page JavaScript cannot read the token, so an XSS bug
+  cannot exfiltrate a session the way it could from `localStorage`.
+- **SameSite=Lax** blocks other origins from making authenticated state-changing
+  requests, which is what stands in for a CSRF token in this project.
+- The cost is that the client cannot inspect its own token; it calls
+  `/api/auth/me` on load to find out whether it is signed in.
+
+Other decisions worth knowing:
+
+- Passwords are bcrypt-hashed at cost 12, and capped at 72 **bytes** because
+  bcrypt silently ignores anything beyond that.
+- Login returns the same 401 for an unknown email and a wrong password, and
+  compares against a decoy hash when no user matches, so neither the response
+  body nor its timing reveals which emails are registered.
+- The JWT carries only `sub` (the user id). Everything else is re-read from the
+  database per request, so a deleted account cannot keep using a live token.
+
 ## Build order / roadmap
 
 1. ✅ **Scaffold monorepo** — both apps run, frontend hits a backend hello-world.
-2. ⬜ Schema + `pg` Pool + `db:setup`; verify Neon connection.
-3. ⬜ User repository + auth (register/login/JWT).
+2. ✅ **Schema + `pg` Pool + `db:setup`** — Neon connection verified.
+3. 🚧 User repository + auth (register/login/JWT) — backend done, client UI next.
 4. ⬜ File upload + text extraction endpoint.
 5. ⬜ LLM service (structured output) + fit-score logic wired into `/analyze`.
 6. ⬜ Frontend New Analysis flow + Result view.
