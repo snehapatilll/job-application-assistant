@@ -70,6 +70,29 @@ Open <http://localhost:5173>. The page calls the backend's `/api/health`
 endpoint (proxied through Vite) and displays the response, confirming the two
 apps are wired together.
 
+## Tests
+
+Node's built-in test runner, executed through `tsx` — no test framework
+dependency.
+
+```bash
+cd server
+npm test          # unit + API tests
+npm run test:unit # scoring and validation only; no database, no network
+npm run test:live # the real Gemini round-trip (costs API quota)
+```
+
+- `tests/unit/` — pure logic: fit-score arithmetic and LLM response validation.
+- `tests/api/` — every route driven over real HTTP against a server the suite
+  spawns on a free port, so the middleware stack, cookie handling, and error
+  handlers are exercised exactly as in production. These need `DATABASE_URL`.
+- `tests/live/` — the one test that calls Gemini. Kept out of `npm test` on
+  purpose: it costs quota, takes seconds, and fails when the API is
+  rate-limited, none of which should break an ordinary run.
+
+Each run namespaces its accounts as `jaa-test-<runId>-*` and deletes them
+afterwards, so concurrent test files never clean up each other's rows.
+
 ## API
 
 | Method | Route                | Auth | Purpose                                     |

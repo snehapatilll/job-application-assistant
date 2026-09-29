@@ -11,7 +11,10 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "tsx --test \"tests/unit/**/*.test.ts\" \"tests/api/**/*.test.ts\"",
+    "test:unit": "tsx --test \"tests/unit/**/*.test.ts\"",
+    "test:live": "tsx --test \"tests/live/**/*.test.ts\"",
     "db:setup": "tsx src/scripts/setupDb.ts",
     "db:verify": "tsx src/scripts/verifyDb.ts"
   },

@@ -1,0 +1,11 @@
+{
+  // Typechecks the tests too. The build config deliberately excludes them:
+  // `tsc` has rootDir src/ and emits to dist/, and tests must not ship.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // Nothing is emitted here, so rootDir only needs to span both trees.
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
