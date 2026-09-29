@@ -31,6 +31,9 @@ export const config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   isProduction: process.env.NODE_ENV === 'production',
 
+  /** Gemini model name — configurable so it is never hardcoded across the code. */
+  geminiModel: process.env.GEMINI_MODEL ?? 'gemini-3.8-flash',
+
   /** Name of the httpOnly cookie carrying the session JWT. */
   authCookieName: 'jaa_session',
 } as const;

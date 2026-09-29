@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { config } from './config.js';
 import { authRouter } from './routes/auth.js';
 import { resumesRouter } from './routes/resumes.js';
+import { analysesRouter } from './routes/analyses.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -32,6 +33,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/resumes', resumesRouter);
+app.use('/api/analyses', analysesRouter);
 
 // Must stay last: the 404 catch-all, then the error handler.
 app.use(notFoundHandler);

@@ -82,6 +82,8 @@ apps are wired together.
 | POST   | `/api/resumes`       | ✅   | Upload a PDF/DOCX resume, store its text     |
 | GET    | `/api/resumes`       | ✅   | The user's resumes, newest first             |
 | GET    | `/api/resumes/:id`   | ✅   | One resume, including the extracted text     |
+| POST   | `/api/analyses`      | ✅   | Analyse a resume against a job description   |
+| GET    | `/api/analyses/:id`  | ✅   | Reopen a stored analysis                     |
 
 ### Auth design notes
 
@@ -115,6 +117,40 @@ up, or persist across a deploy, and nothing to serve back by accident.
   ownership check applied afterwards — there is no path where a row is loaded
   first and the check could be skipped.
 
+### Analysis design notes
+
+**The fit score is computed, not generated.** Gemini identifies the skills a
+posting requires and judges whether the resume evidences each one; the score is
+then derived from weighted coverage (`critical` 3, `important` 2,
+`nice_to_have` 1):
+
+```
+fitScore = round(100 × matched weight ÷ total weight)
+```
+
+Asking a model for a number directly gives something that drifts between runs
+and cannot be justified. Deriving it means the figure always reconciles with the
+matched/missing lists shown beside it, and identical input gives an identical
+score. The arithmetic is returned as `scoreBreakdown` so the UI can show its
+working.
+
+Other decisions:
+
+- The model returns **one** `requiredSkills` list with a `matched` flag rather
+  than separate matched/missing arrays — it has to commit to a single view of
+  the posting, and the server does the partitioning.
+- Output is validated with Zod after parsing. Structured output makes the shape
+  very likely, not guaranteed, and everything downstream assumes those fields.
+- Resume and job text are untrusted input that ends up in a prompt. The system
+  instruction says to treat their contents as data, and nothing downstream acts
+  on the result beyond storing and displaying it.
+- Transient `503`/`429` responses are retried up to three times with backoff,
+  under a single 60-second budget covering all attempts.
+- The resume is loaded through the user-scoped query *before* any LLM call, so
+  an unauthorized `resumeId` can never cost a Gemini request.
+- The job description and the analysis are inserted in one transaction, so a
+  failure cannot leave an orphaned `job_descriptions` row.
+
 Other decisions worth knowing:
 
 - Passwords are bcrypt-hashed at cost 12, and capped at 72 **bytes** because
@@ -131,7 +167,8 @@ Other decisions worth knowing:
 2. ✅ **Schema + `pg` Pool + `db:setup`** — Neon connection verified.
 3. 🚧 User repository + auth (register/login/JWT) — backend done, client UI pending.
 4. 🚧 File upload + text extraction — backend done, client UI pending.
-5. ⬜ LLM service (structured output) + fit-score logic wired into `/analyze`.
+5. 🚧 LLM service (structured output) + fit-score logic — built; the live Gemini
+   round-trip is still unverified (free-tier quota).
 6. ⬜ Frontend New Analysis flow + Result view.
 7. ⬜ History (save + list + reopen).
 8. ⬜ Polish: error states, README, styling.
