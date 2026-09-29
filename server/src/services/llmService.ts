@@ -19,6 +19,12 @@ function isRetryable(err: unknown): boolean {
   return /"code"\s*:\s*(429|503)|UNAVAILABLE|RESOURCE_EXHAUSTED/i.test(message);
 }
 
+/** True for a quota/rate-limit refusal, as opposed to the service being busy. */
+function isQuotaExhausted(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /"code"\s*:\s*429|RESOURCE_EXHAUSTED|quota/i.test(message);
+}
+
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -208,11 +214,22 @@ export async function analyseResumeAgainstJob(
   } catch (err: unknown) {
     // eslint-disable-next-line no-console
     console.error('Gemini request failed:', err);
+
+    // Distinguish the two failures a user can actually act on differently:
+    // a quota refusal will keep failing until the allowance resets, while an
+    // overloaded model is worth retrying in a moment.
+    if (controller.signal.aborted) {
+      throw new HttpError(504, 'The analysis took too long. Please try again.');
+    }
+    if (isQuotaExhausted(err)) {
+      throw new HttpError(
+        429,
+        'The daily limit for the AI service has been reached. Analyses will work again once the quota resets.',
+      );
+    }
     throw new HttpError(
-      502,
-      controller.signal.aborted
-        ? 'The analysis took too long. Please try again.'
-        : 'The analysis service is unavailable right now. Please try again shortly.',
+      503,
+      'The AI service is busy right now. Please try again in a minute.',
     );
   } finally {
     clearTimeout(timeout);
