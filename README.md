@@ -79,6 +79,9 @@ apps are wired together.
 | POST   | `/api/auth/login`    | —    | Exchange credentials for a session          |
 | POST   | `/api/auth/logout`   | —    | Clear the session cookie                    |
 | GET    | `/api/auth/me`       | ✅   | Current user — used to restore session state |
+| POST   | `/api/resumes`       | ✅   | Upload a PDF/DOCX resume, store its text     |
+| GET    | `/api/resumes`       | ✅   | The user's resumes, newest first             |
+| GET    | `/api/resumes/:id`   | ✅   | One resume, including the extracted text     |
 
 ### Auth design notes
 
@@ -91,6 +94,26 @@ The session JWT travels in an **httpOnly, SameSite=Lax cookie**, not in
   requests, which is what stands in for a CSRF token in this project.
 - The cost is that the client cannot inspect its own token; it calls
   `/api/auth/me` on load to find out whether it is signed in.
+
+### Upload design notes
+
+Uploads are parsed in memory and **the file itself is never written to disk** —
+only the extracted text is stored. There is no upload directory to secure, clean
+up, or persist across a deploy, and nothing to serve back by accident.
+
+- File type is decided by **magic bytes**, not by the extension or the
+  browser-supplied `Content-Type`, both of which the client controls. A `.txt`
+  renamed to `.pdf` is rejected.
+- 5MB cap, enforced by multer before the file is parsed.
+- A PDF that yields almost no text (a scan) is a 400 explaining the cause,
+  rather than an empty analysis that fails confusingly later.
+- Legacy `.doc` is detected by its OLE2 header and gets its own message telling
+  the user to re-save as `.docx`.
+- Stored filenames are reduced to their base name, so `../../etc/passwd.pdf`
+  becomes `passwd.pdf`.
+- `user_id` is part of the `WHERE` clause on every resume query, not an
+  ownership check applied afterwards — there is no path where a row is loaded
+  first and the check could be skipped.
 
 Other decisions worth knowing:
 
@@ -106,8 +129,8 @@ Other decisions worth knowing:
 
 1. ✅ **Scaffold monorepo** — both apps run, frontend hits a backend hello-world.
 2. ✅ **Schema + `pg` Pool + `db:setup`** — Neon connection verified.
-3. 🚧 User repository + auth (register/login/JWT) — backend done, client UI next.
-4. ⬜ File upload + text extraction endpoint.
+3. 🚧 User repository + auth (register/login/JWT) — backend done, client UI pending.
+4. 🚧 File upload + text extraction — backend done, client UI pending.
 5. ⬜ LLM service (structured output) + fit-score logic wired into `/analyze`.
 6. ⬜ Frontend New Analysis flow + Result view.
 7. ⬜ History (save + list + reopen).
