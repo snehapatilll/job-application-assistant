@@ -15,6 +15,14 @@ export function requireEnv(name: string): string {
   return value;
 }
 
+/**
+ * Treat an unset variable and one set to an empty string alike — a commented
+ * or blank line in `.env` should mean "not configured", not an empty path.
+ */
+function emptyToUndefined(value: string | undefined): string | undefined {
+  return value === undefined || value.trim() === '' ? undefined : value;
+}
+
 /** How long an auth session lasts, in milliseconds (7 days). */
 export const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -33,6 +41,20 @@ export const config = {
 
   /** Gemini model name — configurable so it is never hardcoded across the code. */
   geminiModel: process.env.GEMINI_MODEL ?? 'gemini-3.8-flash',
+
+  /**
+   * Path to a CA bundle for the database connection. Unset for providers with
+   * a publicly trusted certificate; required for Amazon RDS, which signs with
+   * its own CA. See `db/pool.ts`.
+   */
+  databaseCaFile: emptyToUndefined(process.env.DATABASE_CA_FILE),
+
+  /**
+   * Hostname to verify the database certificate against, when it differs from
+   * the host being dialled — i.e. reaching a private instance through a port
+   * forward. See `db/pool.ts`.
+   */
+  databaseTlsServername: emptyToUndefined(process.env.DATABASE_TLS_SERVERNAME),
 
   /** Name of the httpOnly cookie carrying the session JWT. */
   authCookieName: 'jaa_session',

@@ -27,7 +27,7 @@ Each app is independently runnable and has its own `package.json` and
 | -------- | ----------------------------------------------------------------- |
 | Frontend | React + TypeScript, Vite, Tailwind CSS, React Query, React Router |
 | Backend  | Node.js + Express + TypeScript (strict)                           |
-| Database | PostgreSQL (Neon) via the `pg` driver with hand-written SQL       |
+| Database | PostgreSQL via the `pg` driver with hand-written SQL               |
 | LLM      | Google Gemini (Flash) via `@google/genai`                         |
 | Auth     | JWT in an httpOnly cookie (email + password, bcrypt-hashed)       |
 
@@ -86,6 +86,36 @@ Two consequences worth knowing:
 
 Signing out clears the React Query cache as well as the cookie, so the next
 person to use the browser never sees the previous user's resumes.
+
+## Database connection and TLS
+
+The app talks to any Postgres over `DATABASE_URL`. Certificate verification is
+always on — `rejectUnauthorized` is never disabled — so what changes between
+providers is which CA signed the certificate and which hostname it carries.
+
+| Setup | `DATABASE_CA_FILE` | `DATABASE_TLS_SERVERNAME` |
+| ----- | ------------------ | ------------------------- |
+| Neon, or any publicly trusted cert | unset | unset |
+| RDS, reachable directly | the RDS CA bundle | unset |
+| RDS in a private subnet, via SSM port forward | the RDS CA bundle | the real RDS endpoint |
+
+Two things make RDS different from a public-CA provider:
+
+1. **Amazon signs with its own CA**, which is not in Node's trust store. Without
+   a bundle every connection fails with `SELF_SIGNED_CERT_IN_CHAIN`:
+
+   ```bash
+   curl -o server/certs/rds-global-bundle.pem \
+     https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+   ```
+
+   The bundle is fetched rather than committed — Amazon rotates these, and a
+   stale copy in git is worse than none.
+
+2. **Through a port forward you dial `localhost`** while the certificate names
+   the RDS endpoint, so hostname verification fails. `DATABASE_TLS_SERVERNAME`
+   sets SNI and the name to verify against, which keeps verification strict
+   instead of turning it off to make the error go away.
 
 ## Tests
 

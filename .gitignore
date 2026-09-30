@@ -32,3 +32,7 @@ Thumbs.db
 # Misc
 *.tsbuildinfo
 coverage/
+
+# CA bundles are fetched, not committed — Amazon rotates them, and a stale
+# bundle in git is worse than no bundle.
+server/certs/*.pem
