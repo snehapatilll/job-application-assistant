@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { ConnectionOptions } from 'node:tls';
+import { checkServerIdentity, type ConnectionOptions, type PeerCertificate } from 'node:tls';
 import pg from 'pg';
 import { config, requireEnv } from '../config.js';
 
@@ -39,16 +39,27 @@ function buildConnectionString(raw: string): string {
  * what this file exists to avoid: it accepts any certificate, including an
  * attacker's.
  */
-function buildTlsOptions(): ConnectionOptions {
+export function buildTlsOptions(): ConnectionOptions {
   const options: ConnectionOptions = { rejectUnauthorized: true };
 
   if (config.databaseCaFile !== undefined) {
     options.ca = readFileSync(config.databaseCaFile, 'utf8');
   }
+
   if (config.databaseTlsServername !== undefined) {
-    // Sets SNI and the name checked against the certificate, so a tunnelled
-    // localhost connection still verifies against the real endpoint's cert.
-    options.servername = config.databaseTlsServername;
+    const expected = config.databaseTlsServername;
+
+    // SNI, so the server knows which certificate to present.
+    options.servername = expected;
+
+    // `pg` overwrites `servername` with the host it actually dialled, so on a
+    // tunnelled connection the default check compares the certificate against
+    // "localhost" and fails with ERR_TLS_CERT_ALTNAME_INVALID. Redirect the
+    // check at the real endpoint name instead. This is still a full identity
+    // check — against the name we expect rather than the one we dialled — and
+    // the CA chain is verified either way.
+    options.checkServerIdentity = (_host: string, cert: PeerCertificate) =>
+      checkServerIdentity(expected, cert);
   }
 
   return options;

@@ -113,9 +113,16 @@ Two things make RDS different from a public-CA provider:
    stale copy in git is worse than none.
 
 2. **Through a port forward you dial `localhost`** while the certificate names
-   the RDS endpoint, so hostname verification fails. `DATABASE_TLS_SERVERNAME`
-   sets SNI and the name to verify against, which keeps verification strict
-   instead of turning it off to make the error go away.
+   the RDS endpoint, so the hostname check fails with
+   `ERR_TLS_CERT_ALTNAME_INVALID`. `DATABASE_TLS_SERVERNAME` fixes that.
+
+   Setting SNI alone is not enough: `pg` overwrites `servername` with the host
+   it actually dialled, so the default check still compares the certificate
+   against `localhost`. The pool therefore also overrides `checkServerIdentity`
+   to verify against the real endpoint name. That remains a full identity check
+   — against the name we expect rather than the one we dialled — and the CA
+   chain is verified either way. The shortcut, `rejectUnauthorized: false`,
+   makes the error disappear by accepting any certificate at all.
 
 ## Tests
 
