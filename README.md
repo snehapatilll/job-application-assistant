@@ -14,6 +14,7 @@ private history of past analyses.
 job-application-assistant/
 ├── client/          # React + TypeScript + Vite + Tailwind frontend
 ├── server/          # Node + Express + TypeScript backend (raw SQL via pg)
+├── docs/            # infrastructure notes
 ├── .gitignore
 └── README.md
 ```
@@ -92,6 +93,11 @@ person to use the browser never sees the previous user's resumes.
 The app talks to any Postgres over `DATABASE_URL`. Certificate verification is
 always on — `rejectUnauthorized` is never disabled — so what changes between
 providers is which CA signed the certificate and which hostname it carries.
+
+The database currently runs on Amazon RDS in a private subnet, reached through
+AWS Systems Manager. [docs/aws-setup.md](docs/aws-setup.md) covers that
+infrastructure, what it costs, and the two things that went wrong while
+building it.
 
 | Setup | `DATABASE_CA_FILE` | `DATABASE_TLS_SERVERNAME` |
 | ----- | ------------------ | ------------------------- |
