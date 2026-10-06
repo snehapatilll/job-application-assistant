@@ -5,8 +5,29 @@ explainable fit score, matched vs. missing skills, tailored resume bullet
 suggestions, and a cover letter draft — generated via an LLM. Each user keeps a
 private history of past analyses.
 
-> **Status:** Under active construction. This README is expanded in the final
-> polish phase with screenshots, full architecture notes, and design decisions.
+![The analysis result: a fit score of 72 shown as a meter, with matched and missing skills beside it](docs/screenshots/analysis-result.jpg)
+
+The score is **computed, not generated** — the model judges which skills a
+posting requires and whether the resume evidences each one, and the server
+derives the number from weighted coverage. The arithmetic is printed under the
+meter, so the figure always reconciles with the two lists next to it.
+
+<details>
+<summary><b>More screenshots</b></summary>
+
+**Picking a resume and pasting the posting**
+
+![The new analysis form, with two uploaded resumes listed and a job description pasted in](docs/screenshots/new-analysis.jpg)
+
+**Suggested bullets and the cover letter draft**
+
+![Rewritten resume bullets with rationales, and a cover letter draft with a copy button](docs/screenshots/analysis-suggestions.jpg)
+
+**Private per-user history**
+
+![A list of past analyses, newest first, each with its score and band](docs/screenshots/history.jpg)
+
+</details>
 
 ## Monorepo layout
 
