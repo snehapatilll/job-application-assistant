@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -41,6 +42,16 @@ export const config = {
 
   /** Gemini model name — configurable so it is never hardcoded across the code. */
   geminiModel: process.env.GEMINI_MODEL ?? 'gemini-3.8-flash',
+
+  /**
+   * Where the built React app lives. In production the API also serves it, so
+   * the browser talks to a single origin and the SameSite=Lax session cookie
+   * keeps working. Overridable for container layouts that copy the build
+   * somewhere else.
+   */
+  clientDistPath:
+    process.env.CLIENT_DIST_PATH ??
+    fileURLToPath(new URL('../../client/dist', import.meta.url)),
 
   /**
    * Path to a CA bundle for the database connection. Unset for providers with
